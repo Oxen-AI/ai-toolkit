@@ -1120,6 +1120,7 @@ class StableDiffusion:
             sampler=None,
             pipeline: Union[None, StableDiffusionPipeline, StableDiffusionXLPipeline] = None,
     ):
+        print_acc(f"generate_images with length {len(image_configs)}")
         network = unwrap_model(self.network)
         merge_multiplier = 1.0
         flush()
@@ -1362,8 +1363,8 @@ class StableDiffusion:
 
                     extra = {}
                     validation_image = None
-                    print(f"gen_config.adapter_image_path: {gen_config.adapter_image_path}")
-                    print(f"self.adapter: {self.adapter}")
+                    print_acc(f"gen_config.adapter_image_path: {gen_config.adapter_image_path}")
+                    print_acc(f"self.adapter: {self.adapter}")
                     if self.adapter is not None and gen_config.adapter_image_path is not None:
                         validation_image = Image.open(gen_config.adapter_image_path)
                         # if the name doesnt have .inpainting. in it, make sure it is rgb
@@ -1374,26 +1375,30 @@ class StableDiffusion:
                             if validation_image.mode != "RGBA":
                                 raise ValueError("Inpainting images must have an alpha channel")
                         if isinstance(self.adapter, T2IAdapter):
+                            print_acc(f"isinstance(self.adapter, T2IAdapter)")
                             # not sure why this is double??
-                            # validation_image = validation_image.resize((gen_config.width * 2, gen_config.height * 2))
-                            validation_image = validation_image.resize((gen_config.width, gen_config.height))
+                            validation_image = validation_image.resize((gen_config.width * 2, gen_config.height * 2))
                             extra['image'] = validation_image
                             extra['adapter_conditioning_scale'] = gen_config.adapter_conditioning_scale
                         if isinstance(self.adapter, ControlNetModel):
+                            print_acc(f"isinstance(self.adapter, ControlNetModel)")
                             validation_image = validation_image.resize((gen_config.width, gen_config.height))
                             extra['image'] = validation_image
                             extra['controlnet_conditioning_scale'] = gen_config.adapter_conditioning_scale
                         if isinstance(self.adapter, CustomAdapter) and self.adapter.control_lora is not None:
+                            print_acc(f"isinstance(self.adapter, CustomAdapter) and self.adapter.control_lora is not None")
                             validation_image = validation_image.resize((gen_config.width, gen_config.height))
                             extra['control_image'] = validation_image
                             extra['control_image_idx'] = gen_config.ctrl_idx
                         if isinstance(self.adapter, IPAdapter) or isinstance(self.adapter, ClipVisionAdapter):
+                            print_acc(f"isinstance(self.adapter, IPAdapter) or isinstance(self.adapter, ClipVisionAdapter)")
                             transform = transforms.Compose([
                                 transforms.ToTensor(),
                             ])
                             validation_image = transform(validation_image)
                         if isinstance(self.adapter, CustomAdapter):
                             # todo allow loading multiple
+                            print_acc(f"isinstance(self.adapter, CustomAdapter)")
                             transform = transforms.Compose([
                                 transforms.ToTensor(),
                             ])
@@ -1401,6 +1406,7 @@ class StableDiffusion:
                             self.adapter.num_images = 1
                         if isinstance(self.adapter, ReferenceAdapter):
                             # need -1 to 1
+                            print_acc(f"isinstance(self.adapter, ReferenceAdapter)")
                             validation_image = transforms.ToTensor()(validation_image)
                             validation_image = validation_image * 2.0 - 1.0
                             validation_image = validation_image.unsqueeze(0)
@@ -1514,7 +1520,7 @@ class StableDiffusion:
                     unconditional_embeds = unconditional_embeds.to(self.device_torch, dtype=self.unet.dtype)
 
                     if self.is_xl:
-                        print(f"self.is_xl: {self.is_xl}")
+                        print_acc(f"self.is_xl: {self.is_xl}")
                         # fix guidance rescale for sdxl
                         # was trained on 0.7 (I believe)
 
@@ -1549,7 +1555,7 @@ class StableDiffusion:
                             **extra
                         ).images[0]
                     elif self.is_v3:
-                        print(f"self.is_v3: {self.is_v3}")
+                        print_acc(f"self.is_v3: {self.is_v3}")
                         img = pipeline(
                             prompt_embeds=conditional_embeds.text_embeds,
                             pooled_prompt_embeds=conditional_embeds.pooled_embeds,
@@ -1564,7 +1570,7 @@ class StableDiffusion:
                             **extra
                         ).images[0]
                     elif self.is_flux:
-                        print(f"self.is_flux: {self.is_flux}")
+                        print_acc(f"self.is_flux: {self.is_flux}")
                         if self.model_config.use_flux_cfg:
                             img = pipeline(
                                 prompt_embeds=conditional_embeds.text_embeds,
@@ -1580,7 +1586,7 @@ class StableDiffusion:
                                 **extra
                             ).images[0]
                         else:
-                            print(f"!self.is_flux: {self.is_flux}")
+                            print_acc(f"!self.is_flux: {self.is_flux}")
                             # Fix a bug in diffusers/torch
                             def callback_on_step_end(pipe, i, t, callback_kwargs):
                                 latents = callback_kwargs["latents"]
@@ -1602,7 +1608,7 @@ class StableDiffusion:
                                 **extra
                             ).images[0]
                     elif self.is_lumina2:
-                        print(f"self.is_lumina2: {self.is_lumina2}")
+                        print_acc(f"self.is_lumina2: {self.is_lumina2}")
                         pipeline: Lumina2Pipeline = pipeline
 
                         img = pipeline(
@@ -1619,7 +1625,7 @@ class StableDiffusion:
                             **extra
                         ).images[0]
                     elif self.is_pixart:
-                        print(f"self.is_pixart: {self.is_pixart}")
+                        print_acc(f"self.is_pixart: {self.is_pixart}")
                         # needs attention masks for some reason
                         img = pipeline(
                             prompt=None,
@@ -1641,7 +1647,7 @@ class StableDiffusion:
                             **extra
                         ).images[0]
                     elif self.is_auraflow:
-                        print(f"self.is_auraflow: {self.is_auraflow}")
+                        print_acc(f"self.is_auraflow: {self.is_auraflow}")
                         pipeline: AuraFlowPipeline = pipeline
 
                         img = pipeline(
@@ -1664,7 +1670,7 @@ class StableDiffusion:
                             **extra
                         ).images[0]
                     else:
-                        print(f"self.is_else: {self.is_else}")
+                        print_acc(f"self.is_else: {self.is_else}")
                         img = pipeline(
                             # prompt=gen_config.prompt,
                             prompt_embeds=conditional_embeds.text_embeds,
@@ -1680,7 +1686,7 @@ class StableDiffusion:
                         ).images[0]
 
                     if self.refiner_unet is not None and gen_config.refiner_start_at < 1.0:
-                        print(f"self.refiner_unet is not None and gen_config.refiner_start_at < 1.0")
+                        print_acc(f"self.refiner_unet is not None and gen_config.refiner_start_at < 1.0")
                         # slide off just the last 1280 on the last dim as refiner does not use first text encoder
                         # todo, should we just use the Text encoder for the refiner? Fine tuned versions will differ
                         refiner_text_embeds = conditional_embeds.text_embeds[:, :, -1280:]
