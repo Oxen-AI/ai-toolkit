@@ -286,7 +286,7 @@ class BaseSDTrainProcess(BaseTrainProcess):
         return generate_image_config_list
 
     def sample(self, step=None, is_first=False):
-        print_acc(f"BaseSDTrainProcess sample with length {len(sample_config.prompts)}")
+        print_acc(f"BaseSDTrainProcess sample!")
         if not self.accelerator.is_main_process:
             print_acc(f"sample() not main process, returning")
             return
