@@ -192,7 +192,7 @@ class QwenImageEditModel(QwenImageModel):
         if control_images is not None:
             # control images are 0 - 1 scale, shape (bs, ch, height, width)
             # images are always run through at 1MP, based on diffusers inference code.
-            target_area = 512 * 512
+            target_area = 1024 * 1024
             ratio = control_images.shape[2] / control_images.shape[3]
             width = math.sqrt(target_area * ratio)
             height = width / ratio
