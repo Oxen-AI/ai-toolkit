@@ -10,7 +10,7 @@ import re
 import traceback
 from typing import Union, List, Optional
 from datetime import datetime
-
+import sys
 import numpy as np
 import yaml
 from diffusers import T2IAdapter, ControlNetModel
@@ -305,6 +305,7 @@ class BaseSDTrainProcess(BaseTrainProcess):
             for i in range(len(sample_config.prompts)):
                 test_image_paths.append(test_image_path_list[i % len(test_image_path_list)])
 
+        print_acc(f"BaseSDTrainProcess sample with length {len(sample_config.prompts)}")
         for i in range(len(sample_config.prompts)):
             if sample_config.walk_seed:
                 current_seed = start_seed + i
@@ -380,9 +381,11 @@ class BaseSDTrainProcess(BaseTrainProcess):
             self.adapter.is_sampling = True
         
         # send to be generated
+        print_acc(f"BaseSDTrainProcess generating images")
         self.sd.generate_images(gen_img_config_list, sampler=sample_config.sampler)
+        print_acc(f"BaseSDTrainProcess generating images done")
+        sys.stdout.flush()
 
-        
         if self.adapter is not None and isinstance(self.adapter, CustomAdapter):
             self.adapter.is_sampling = False
 
@@ -2063,7 +2066,7 @@ class BaseSDTrainProcess(BaseTrainProcess):
         if self.train_config.skip_first_sample or self.train_config.disable_sampling:
             print_acc("Skipping first sample due to config setting")
         elif self.step_num <= 1 or self.train_config.force_first_sample:
-            print_acc("Generating baseline samples before training {self.__class__.__name__}")
+            print_acc(f"Generating baseline samples before training {self.__class__.__name__}")
             self.sample(self.step_num)
         
         if self.accelerator.is_local_main_process:
