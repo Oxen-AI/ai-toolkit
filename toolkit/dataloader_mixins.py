@@ -634,7 +634,7 @@ class ImageProcessingDTOMixin:
             transform: Union[None, transforms.Compose],
             only_load_latents=False
     ):
-        print_acc(f"ImageProcessingDTOMixin load_and_process_image")
+        print_acc(f"ImageProcessingDTOMixin load_and_process_image {self.dataset_config.num_frames}")
         if self.dataset_config.num_frames > 1:
             self.load_and_process_video(transform, only_load_latents)
             return
@@ -683,12 +683,15 @@ class ImageProcessingDTOMixin:
 
         if self.flip_x:
             # do a flip
+            print_acc(f"ImageProcessingDTOMixin img.transpose(Image.FLIP_LEFT_RIGHT)")
             img = img.transpose(Image.FLIP_LEFT_RIGHT)
         if self.flip_y:
             # do a flip
+            print_acc(f"ImageProcessingDTOMixin img.transpose(Image.FLIP_TOP_BOTTOM)")
             img = img.transpose(Image.FLIP_TOP_BOTTOM)
 
         if self.dataset_config.buckets:
+            print_acc(f"ImageProcessingDTOMixin img.resize((self.scale_to_width, self.scale_to_height), Image.BICUBIC) {self.scale_to_width, self.scale_to_height}")
             # scale and crop based on file item
             img = img.resize((self.scale_to_width, self.scale_to_height), Image.BICUBIC)
             # crop to x_crop, y_crop, x_crop + crop_width, y_crop + crop_height
@@ -707,12 +710,15 @@ class ImageProcessingDTOMixin:
         else:
             # Downscale the source image first
             # TODO this is nto right
+            print_acc(f"ImageProcessingDTOMixin img.resize((int(img.size[0] * self.dataset_config.scale), int(img.size[1] * self.dataset_config.scale)), Image.BICUBIC) {int(img.size[0] * self.dataset_config.scale), int(img.size[1] * self.dataset_config.scale)}")
             img = img.resize(
                 (int(img.size[0] * self.dataset_config.scale), int(img.size[1] * self.dataset_config.scale)),
                 Image.BICUBIC)
             min_img_size = min(img.size)
+            print_acc(f"ImageProcessingDTOMixin min_img_size: {min_img_size}")
             if self.dataset_config.random_crop:
                 if self.dataset_config.random_scale and min_img_size > self.dataset_config.resolution:
+                    print_acc(f"ImageProcessingDTOMixin self.dataset_config.random_scale and min_img_size > self.dataset_config.resolution")
                     if min_img_size < self.dataset_config.resolution:
                         print_acc(
                             f"Unexpected values: min_img_size={min_img_size}, self.resolution={self.dataset_config.resolution}, image file={self.path}")
@@ -730,16 +736,21 @@ class ImageProcessingDTOMixin:
                 img = transforms.CenterCrop(min_img_size)(img)
                 img = img.resize((self.dataset_config.resolution, self.dataset_config.resolution), Image.BICUBIC)
 
+        print_acc(f"ImageProcessingDTOMixin self.augments is not None and len(self.augments) > 0: {self.augments is not None and len(self.augments) > 0}")
         if self.augments is not None and len(self.augments) > 0:
+            print_acc(f"ImageProcessingDTOMixin do augmentations {len(self.augments)}")
             # do augmentations
             for augment in self.augments:
+                print_acc(f"ImageProcessingDTOMixin augment: {augment}")
                 if augment in transforms_dict:
                     img = transforms_dict[augment](img)
 
         if self.has_augmentations:
             # augmentations handles transforms
+            print_acc(f"ImageProcessingDTOMixin self.has_augmentations")
             img = self.augment_image(img, transform=transform)
         elif transform:
+            print_acc(f"ImageProcessingDTOMixin transform")
             img = transform(img)
 
         self.tensor = img
