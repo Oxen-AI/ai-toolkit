@@ -422,6 +422,8 @@ class BaseModel:
 
                     extra = {}
                     validation_image = None
+                    print_acc(f"gen_config.adapter_image_path: {gen_config.adapter_image_path}")
+                    print_acc(f"self.adapter: {self.adapter}")
                     if self.adapter is not None and gen_config.adapter_image_path is not None:
                         validation_image = Image.open(gen_config.adapter_image_path)
                         if ".inpaint." not in gen_config.adapter_image_path:
@@ -514,6 +516,7 @@ class BaseModel:
                         # load the control image if out model uses it in text encoding
                         if gen_config.ctrl_img is not None and self.encode_control_in_text_embeddings:
                             ctrl_img = Image.open(gen_config.ctrl_img).convert("RGB")
+                            print_acc(f"ctrl_img: {ctrl_img}, size: {ctrl_img.size}")
                             # convert to 0 to 1 tensor
                             ctrl_img = (
                                 TF.to_tensor(ctrl_img)

@@ -150,7 +150,9 @@ class ImageDataset(Dataset, CaptionMixin):
         min_img_size = min(img.size)
 
         if self.random_crop:
+            print_acc(f"ImageDataset random_crop")
             if self.random_scale and min_img_size > self.resolution:
+                print_acc(f"ImageDataset random_scale")
                 if min_img_size < self.resolution:
                     print_acc(
                         f"Unexpected values: min_img_size={min_img_size}, self.resolution={self.resolution}, image file={img_path}")
@@ -161,8 +163,11 @@ class ImageDataset(Dataset, CaptionMixin):
                 scale_width = int((img.width + 5) * scaler)
                 scale_height = int((img.height + 5) * scaler)
                 img = img.resize((scale_width, scale_height), Image.BICUBIC)
+            print_acc(f"ImageDataset transforms.RandomCrop(self.resolution)(img) {self.resolution}")
             img = transforms.RandomCrop(self.resolution)(img)
         else:
+            print_acc(f"ImageDataset min_img_size: {min_img_size}")
+            print_acc(f"ImageDataset self.resolution: {self.resolution}")
             img = transforms.CenterCrop(min_img_size)(img)
             img = img.resize((self.resolution, self.resolution), Image.BICUBIC)
 
@@ -353,6 +358,10 @@ class PairedImageDataset(Dataset):
             img2_crop_width = bucket_resolution["width"]
 
             # scale then center crop images
+            print_acc(f"PairedImageDataset CenterCrop img1_scale_to_width: {img1_scale_to_width}")
+            print_acc(f"PairedImageDataset CenterCrop img1_scale_to_height: {img1_scale_to_height}")
+            print_acc(f"PairedImageDataset CenterCrop img2_scale_to_width: {img2_scale_to_width}")
+            print_acc(f"PairedImageDataset CenterCrop img2_scale_to_height: {img2_scale_to_height}")
             img1 = img1.resize((img1_scale_to_width, img1_scale_to_height), Image.BICUBIC)
             img1 = transforms.CenterCrop((img1_crop_height, img1_crop_width))(img1)
             img2 = img2.resize((img2_scale_to_width, img2_scale_to_height), Image.BICUBIC)

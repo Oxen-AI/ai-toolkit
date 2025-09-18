@@ -121,6 +121,9 @@ class QwenImageEditModel(QwenImageModel):
 
             return {"latents": latents}
 
+        print_acc(f"control_img.size: {control_img.size}")
+        print_acc(f"gen_config.width: {gen_config.width}")
+        print_acc(f"gen_config.height: {gen_config.height}")
         img = pipeline(
             image=control_img,
             prompt_embeds=conditional_embeds.text_embeds,
