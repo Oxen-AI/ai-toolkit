@@ -286,7 +286,9 @@ class BaseSDTrainProcess(BaseTrainProcess):
         return generate_image_config_list
 
     def sample(self, step=None, is_first=False):
+        print_acc(f"BaseSDTrainProcess sample with length {len(sample_config.prompts)}")
         if not self.accelerator.is_main_process:
+            print_acc(f"sample() not main process, returning")
             return
         flush()
         sample_folder = os.path.join(self.save_root, 'samples')
@@ -364,6 +366,7 @@ class BaseSDTrainProcess(BaseTrainProcess):
                 ctrl_idx=sample_item.ctrl_idx,
                 **extra_args
             ))
+        print_acc(f"gen_img_config_list with length {len(gen_img_config_list)}")
 
         # post process
         gen_img_config_list = self.post_process_generate_image_config_list(gen_img_config_list)
@@ -2060,7 +2063,7 @@ class BaseSDTrainProcess(BaseTrainProcess):
         if self.train_config.skip_first_sample or self.train_config.disable_sampling:
             print_acc("Skipping first sample due to config setting")
         elif self.step_num <= 1 or self.train_config.force_first_sample:
-            print_acc("Generating baseline samples before training")
+            print_acc("Generating baseline samples before training {self.__class__.__name__}")
             self.sample(self.step_num)
         
         if self.accelerator.is_local_main_process:

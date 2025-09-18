@@ -37,6 +37,7 @@ import random
 import traceback
 from transformers import SiglipImageProcessor, SiglipVisionModel
 import torch.nn.functional as F
+from toolkit.print import print_acc
 
 IMAGE_TRANSFORMS = transforms.Compose(
     [
@@ -495,6 +496,7 @@ class TrainVAEProcess(BaseTrainProcess):
         self.remove_oldest_checkpoint()
 
     def sample(self, step=None):
+        print_acc(f"TrainVAEProcess sample")
         sample_folder = os.path.join(self.save_root, 'samples')
         if not os.path.exists(sample_folder):
             os.makedirs(sample_folder, exist_ok=True)

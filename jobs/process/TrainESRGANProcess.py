@@ -29,6 +29,7 @@ from tqdm import tqdm
 import time
 import numpy as np
 from .models.vgg19_critic import Critic
+from toolkit.print import print_acc
 
 IMAGE_TRANSFORMS = transforms.Compose(
     [
@@ -274,6 +275,7 @@ class TrainESRGANProcess(BaseTrainProcess):
             self.critic.save(step)
 
     def sample(self, step=None, batch: Optional[List[torch.Tensor]] = None):
+        print_acc(f"TrainESRGANProcess sample")
         sample_folder = os.path.join(self.save_root, 'samples')
         if not os.path.exists(sample_folder):
             os.makedirs(sample_folder, exist_ok=True)
