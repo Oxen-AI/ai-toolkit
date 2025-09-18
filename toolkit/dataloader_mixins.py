@@ -750,7 +750,7 @@ class ImageProcessingDTOMixin:
             print_acc(f"ImageProcessingDTOMixin self.has_augmentations")
             img = self.augment_image(img, transform=transform)
         elif transform:
-            print_acc(f"ImageProcessingDTOMixin transform")
+            print_acc(f"ImageProcessingDTOMixin transform {transform}")
             img = transform(img)
 
         self.tensor = img

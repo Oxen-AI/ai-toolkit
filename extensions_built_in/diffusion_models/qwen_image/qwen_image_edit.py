@@ -196,6 +196,9 @@ class QwenImageEditModel(QwenImageModel):
             width = round(width / 32) * 32
             height = round(height / 32) * 32
 
+            print_acc(f"get_prompt_embeds width: {width}")
+            print_acc(f"get_prompt_embeds height: {height}")
+
             control_images = F.interpolate(
                 control_images, size=(height, width), mode="bilinear"
             )
