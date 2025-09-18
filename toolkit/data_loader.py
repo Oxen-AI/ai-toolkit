@@ -97,7 +97,7 @@ class ImageDataset(Dataset, CaptionMixin):
                           file.lower().endswith(('.jpg', '.jpeg', '.png', '.webp'))]
 
         # this might take a while
-        print_acc(f"  -  Preprocessing image dimensions")
+        print_acc(f"  -  ImageDataset Preprocessing image dimensions")
         new_file_list = []
         bad_count = 0
         for file in tqdm(self.file_list):
@@ -114,8 +114,8 @@ class ImageDataset(Dataset, CaptionMixin):
 
         self.file_list = new_file_list
 
-        print_acc(f"  -  Found {len(self.file_list)} images")
-        print_acc(f"  -  Found {bad_count} images that are too small")
+        print_acc(f"  -  ImageDataset Found {len(self.file_list)} images")
+        print_acc(f"  -  ImageDataset Found {bad_count} images that are too small")
         assert len(self.file_list) > 0, f"no images found in {self.path}"
 
         self.transform = transforms.Compose([
@@ -467,11 +467,11 @@ class AiToolkitDataset(LatentCachingMixin, ControlCachingMixin, CLIPCachingMixin
             ])
 
         # this might take a while
-        print_acc(f"Dataset: {self.dataset_path}")
+        print_acc(f"AiToolkitDataset: {self.dataset_path}")
         if self.is_video:
             print_acc(f"  -  Preprocessing video dimensions")
         else:
-            print_acc(f"  -  Preprocessing image dimensions")
+            print_acc(f"  -  AiToolkitDataset Preprocessing image dimensions")
         dataset_folder = self.dataset_path
         if not os.path.isdir(self.dataset_path):
             dataset_folder = os.path.dirname(dataset_folder)

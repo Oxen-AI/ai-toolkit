@@ -262,6 +262,7 @@ class TrainSliderProcess(BaseSDTrainProcess):
                 new_height = int(img.height * (width / img.width))
 
             img = img.resize((new_width, new_height))
+            print_acc(f"TrainSliderProcess get_adapter_images transforms.CenterCrop(height, width) {height, width}")
             crop_fn = transforms.CenterCrop((height, width))
             # crop the center to match batch
             img = crop_fn(img)

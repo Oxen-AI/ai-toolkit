@@ -634,6 +634,7 @@ class ImageProcessingDTOMixin:
             transform: Union[None, transforms.Compose],
             only_load_latents=False
     ):
+        print_acc(f"ImageProcessingDTOMixin load_and_process_image")
         if self.dataset_config.num_frames > 1:
             self.load_and_process_video(transform, only_load_latents)
             return
@@ -694,6 +695,7 @@ class ImageProcessingDTOMixin:
             if img.width < self.crop_x + self.crop_width or img.height < self.crop_y + self.crop_height:
                 # todo look into this. This still happens sometimes
                 print_acc('size mismatch')
+            print_acc(f"ImageProcessingDTOMixin img.crop((self.crop_x, self.crop_y, self.crop_x + self.crop_width, self.crop_y + self.crop_height)) {self.crop_x, self.crop_y, self.crop_x + self.crop_width, self.crop_y + self.crop_height}")
             img = img.crop((
                 self.crop_x,
                 self.crop_y,
@@ -721,8 +723,10 @@ class ImageProcessingDTOMixin:
                     scale_width = int((img.width + 5) * scaler)
                     scale_height = int((img.height + 5) * scaler)
                     img = img.resize((scale_width, scale_height), Image.BICUBIC)
+                print_acc(f"ImageProcessingDTOMixin transforms.RandomCrop(self.dataset_config.resolution)(img) {self.dataset_config.resolution}")
                 img = transforms.RandomCrop(self.dataset_config.resolution)(img)
             else:
+                print_acc(f"ImageProcessingDTOMixin transforms.CenterCrop(min_img_size)(img) {min_img_size}")
                 img = transforms.CenterCrop(min_img_size)(img)
                 img = img.resize((self.dataset_config.resolution, self.dataset_config.resolution), Image.BICUBIC)
 
@@ -806,6 +810,7 @@ class InpaintControlFileItemDTOMixin:
                 img = img.resize((self.scale_to_width, self.scale_to_height), Image.BICUBIC)
                 # img = transforms.CenterCrop((self.crop_height, self.crop_width))(img)
                 # crop
+                print_acc(f"InpaintControlFileItemDTOMixin img.crop((self.crop_x, self.crop_y, self.crop_x + self.crop_width, self.crop_y + self.crop_height)) {self.crop_x, self.crop_y, self.crop_x + self.crop_width, self.crop_y + self.crop_height}")
                 img = img.crop((
                     self.crop_x,
                     self.crop_y,
@@ -869,6 +874,7 @@ class ControlFileItemDTOMixin:
                 self.control_path = self.control_path[0]
 
     def load_control_image(self: 'FileItemDTO'):
+        print_acc(f"ControlFileItemDTOMixin load_control_image")
         control_tensors = []
         control_path_list = self.control_path
         if not isinstance(self.control_path, list):
@@ -906,9 +912,11 @@ class ControlFileItemDTOMixin:
                     img = img.transpose(Image.FLIP_TOP_BOTTOM)
 
                 if self.dataset_config.buckets:
+                    print_acc(f"ControlFileItemDTOMixin img.resize((self.scale_to_width, self.scale_to_height), Image.BICUBIC) {self.scale_to_width, self.scale_to_height}")
                     # scale and crop based on file item
                     img = img.resize((self.scale_to_width, self.scale_to_height), Image.BICUBIC)
                     # img = transforms.CenterCrop((self.crop_height, self.crop_width))(img)
+                    print_acc(f"ControlFileItemDTOMixin img.crop((self.crop_x, self.crop_y, self.crop_x + self.crop_width, self.crop_y + self.crop_height)) {self.crop_x, self.crop_y, self.crop_x + self.crop_width, self.crop_y + self.crop_height}")
                     # crop
                     img = img.crop((
                         self.crop_x,
@@ -1082,6 +1090,7 @@ class ClipImageFileItemDTOMixin:
             return self.clip_image_path
 
     def load_clip_image(self: 'FileItemDTO'):
+        print_acc(f"ClipImageFileItemDTOMixin load_clip_image")
         is_dynamic_size_and_aspect = isinstance(self.clip_image_processor, PixtralVisionImagePreprocessorCompatible) or \
                                     isinstance(self.clip_image_processor, SiglipImageProcessor)
         if self.clip_image_processor is None:
@@ -1120,6 +1129,7 @@ class ClipImageFileItemDTOMixin:
             min_size = min(img.width, img.height)
             if self.dataset_config.square_crop:
                 # center crop to a square
+                print_acc(f"ClipImageFileItemDTOMixin transforms.CenterCrop(min_size)(img) {min_size}")
                 img = transforms.CenterCrop(min_size)(img)
             else:
                 # image must be square. If it is not, we will resize/squish it so it is, that way we don't crop out data
@@ -1350,9 +1360,11 @@ class MaskFileItemDTOMixin:
         img = img.convert('L')
 
         if self.dataset_config.buckets:
+            print_acc(f"MaskFileItemDTOMixin img.resize((self.scale_to_width, self.scale_to_height), Image.BICUBIC) {self.scale_to_width, self.scale_to_height}")
             # scale and crop based on file item
             img = img.resize((self.scale_to_width, self.scale_to_height), Image.BICUBIC)
             # img = transforms.CenterCrop((self.crop_height, self.crop_width))(img)
+            print_acc(f"MaskFileItemDTOMixin img.crop((self.crop_x, self.crop_y, self.crop_x + self.crop_width, self.crop_y + self.crop_height)) {self.crop_x, self.crop_y, self.crop_x + self.crop_width, self.crop_y + self.crop_height}")
             # crop
             img = img.crop((
                 self.crop_x,
@@ -1399,6 +1411,7 @@ class UnconditionalFileItemDTOMixin:
                     break
 
     def load_unconditional_image(self: 'FileItemDTO'):
+        print_acc(f"UnconditionalFileItemDTOMixin load_unconditional_image")
         try:
             img = Image.open(self.unconditional_path)
             img = exif_transpose(img)
@@ -1425,9 +1438,11 @@ class UnconditionalFileItemDTOMixin:
             img = img.transpose(Image.FLIP_TOP_BOTTOM)
 
         if self.dataset_config.buckets:
+            print_acc(f"UnconditionalFileItemDTOMixin img.resize((self.scale_to_width, self.scale_to_height), Image.BICUBIC) {self.scale_to_width, self.scale_to_height}")
             # scale and crop based on file item
             img = img.resize((self.scale_to_width, self.scale_to_height), Image.BICUBIC)
             # img = transforms.CenterCrop((self.crop_height, self.crop_width))(img)
+            print_acc(f"UnconditionalFileItemDTOMixin img.crop((self.crop_x, self.crop_y, self.crop_x + self.crop_width, self.crop_y + self.crop_height)) {self.crop_x, self.crop_y, self.crop_x + self.crop_width, self.crop_y + self.crop_height}")
             # crop
             img = img.crop((
                 self.crop_x,
