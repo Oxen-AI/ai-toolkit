@@ -124,6 +124,10 @@ class QwenImageEditModel(QwenImageModel):
         print_acc(f"control_img.size: {control_img.size}")
         print_acc(f"gen_config.width: {gen_config.width}")
         print_acc(f"gen_config.height: {gen_config.height}")
+        print_acc(f"gen_config.num_inference_steps: {gen_config.num_inference_steps}")
+        print_acc(f"extra: {extra}")
+        print_acc(f"generator: {generator}")
+
         img = pipeline(
             image=control_img,
             prompt_embeds=conditional_embeds.text_embeds,

@@ -146,8 +146,12 @@ class ImageDataset(Dataset, CaptionMixin):
             img = Image.fromarray(np.random.randint(0, 255, (1024, 1024, 3), dtype=np.uint8))
 
         # Downscale the source image first
+        print_acc(f"ImageDataset img.size: {img.size}")
+        print_acc(f"ImageDataset self.scale: {self.scale}")
         img = img.resize((int(img.size[0] * self.scale), int(img.size[1] * self.scale)), Image.BICUBIC)
+        print_acc(f"ImageDataset img.size: {img.size}")
         min_img_size = min(img.size)
+        print_acc(f"ImageDataset min_img_size: {min_img_size}")
 
         if self.random_crop:
             print_acc(f"ImageDataset random_crop")
