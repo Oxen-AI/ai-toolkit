@@ -356,6 +356,7 @@ class BaseModel:
             pipeline: Union[None, StableDiffusionPipeline,
                             StableDiffusionXLPipeline] = None,
     ):
+        print_acc(f"base_model generate_images")
         network = self.network
         merge_multiplier = 1.0
         flush()
@@ -415,6 +416,7 @@ class BaseModel:
                 if network is not None:
                     assert network.is_active
 
+                print_acc(f"base_model generate_images with length {len(image_configs)}")
                 for i in tqdm(range(len(image_configs)), desc=f"Generating Images", leave=False):
                     gen_config = image_configs[i]
 
@@ -429,27 +431,33 @@ class BaseModel:
                             if validation_image.mode != "RGBA":
                                 raise ValueError("Inpainting images must have an alpha channel")
                         if isinstance(self.adapter, T2IAdapter):
+                            print_acc(f"isinstance(self.adapter, T2IAdapter)")
                             # not sure why this is double??
-                            validation_image = validation_image.resize(
-                                (gen_config.width * 2, gen_config.height * 2))
+                            # validation_image = validation_image.resize(
+                            #     (gen_config.width * 2, gen_config.height * 2))
+                            validation_image = validation_image.resize((gen_config.width, gen_config.height))
                             extra['image'] = validation_image
                             extra['adapter_conditioning_scale'] = gen_config.adapter_conditioning_scale
                         if isinstance(self.adapter, ControlNetModel):
+                            print_acc(f"isinstance(self.adapter, ControlNetModel)")
                             validation_image = validation_image.resize(
                                 (gen_config.width, gen_config.height))
                             extra['image'] = validation_image
                             extra['controlnet_conditioning_scale'] = gen_config.adapter_conditioning_scale
                         if isinstance(self.adapter, CustomAdapter) and self.adapter.control_lora is not None:
+                            print_acc(f"isinstance(self.adapter, CustomAdapter) and self.adapter.control_lora is not None")
                             validation_image = validation_image.resize((gen_config.width, gen_config.height))
                             extra['control_image'] = validation_image
                             extra['control_image_idx'] = gen_config.ctrl_idx
                         if isinstance(self.adapter, IPAdapter) or isinstance(self.adapter, ClipVisionAdapter):
+                            print_acc(f"isinstance(self.adapter, IPAdapter) or isinstance(self.adapter, ClipVisionAdapter)")
                             transform = transforms.Compose([
                                 transforms.ToTensor(),
                             ])
                             validation_image = transform(validation_image)
                         if isinstance(self.adapter, CustomAdapter):
                             # todo allow loading multiple
+                            print_acc(f"isinstance(self.adapter, CustomAdapter)")
                             transform = transforms.Compose([
                                 transforms.ToTensor(),
                             ])
@@ -457,6 +465,7 @@ class BaseModel:
                             self.adapter.num_images = 1
                         if isinstance(self.adapter, ReferenceAdapter):
                             # need -1 to 1
+                            print_acc(f"isinstance(self.adapter, ReferenceAdapter)")
                             validation_image = transforms.ToTensor()(validation_image)
                             validation_image = validation_image * 2.0 - 1.0
                             validation_image = validation_image.unsqueeze(0)
@@ -598,6 +607,7 @@ class BaseModel:
                     unconditional_embeds = unconditional_embeds.to(
                         self.device_torch, dtype=self.unet.dtype)
 
+                    print_acc(f"base_model generate_single_image gen_config: {gen_config}")
                     img = self.generate_single_image(
                         pipeline,
                         gen_config,

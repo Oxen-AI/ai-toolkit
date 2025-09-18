@@ -17,6 +17,7 @@ from toolkit.accelerator import get_accelerator, unwrap_model
 from optimum.quanto import freeze, QTensor
 from toolkit.util.quantize import quantize, get_qtype, quantize_model
 import torch.nn.functional as F
+from toolkit.print import print_acc
 
 from diffusers import (
     QwenImagePipeline,
@@ -89,6 +90,7 @@ class QwenImageEditModel(QwenImageModel):
         generator: torch.Generator,
         extra: dict,
     ):
+        print_acc(f"qwen_image_edit generate_single_image gen_config: {gen_config}")
         self.model.to(self.device_torch, dtype=self.torch_dtype)
         sc = self.get_bucket_divisibility()
         gen_config.width = int(gen_config.width // sc * sc)
@@ -100,6 +102,10 @@ class QwenImageEditModel(QwenImageModel):
             control_img = control_img.convert("RGB")
             # resize to width and height
             if control_img.size != (gen_config.width, gen_config.height):
+                print_acc(f"control_img.size != (gen_config.width, gen_config.height)")
+                print_acc(f"control_img.size: {control_img.size}")
+                print_acc(f"gen_config.width: {gen_config.width}")
+                print_acc(f"gen_config.height: {gen_config.height}")
                 control_img = control_img.resize(
                     (gen_config.width, gen_config.height), Image.BILINEAR
                 )
