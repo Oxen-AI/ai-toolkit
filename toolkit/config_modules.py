@@ -531,7 +531,7 @@ class TrainConfig:
         self.switch_boundary_every: int = kwargs.get('switch_boundary_every', 1)
 
 
-ModelArch = Literal['sd1', 'sd2', 'sd3', 'sdxl', 'pixart', 'pixart_sigma', 'auraflow', 'flux', 'flex1', 'flex2', 'lumina2', 'vega', 'ssd', 'wan21']
+ModelArch = Literal['sd1', 'sd2', 'sd3', 'sdxl', 'pixart', 'pixart_sigma', 'auraflow', 'flux', 'flex1', 'flex2', 'lumina2', 'vega', 'ssd', 'wan21', 'dinov3']
 
 
 class ModelConfig:
@@ -639,7 +639,12 @@ class ModelConfig:
         
         if self.arch == "flex1":
             self.arch = "flux"
-        
+
+        if self.arch == "dinov3":
+            self.num_classes = kwargs.get("num_classes", 21)
+            self.target_size = kwargs.get("target_size", 768)
+            self.decoder_type = kwargs.get("decoder_type", "linear")
+
         # handle migrating to new model arch
         if self.arch is not None:
             # reverse the arch to the old style
@@ -789,6 +794,8 @@ class DatasetConfig:
         self.folder_path: str = kwargs.get('folder_path', None)
         # can be json or folder path
         self.dataset_path: str = kwargs.get('dataset_path', None)
+
+        self.label_path: str = kwargs.get('label_path', None)
 
         self.default_caption: str = kwargs.get('default_caption', None)
         # trigger word for just this dataset

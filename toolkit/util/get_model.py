@@ -9,11 +9,13 @@ import pkgutil
 
 from toolkit.models.wan21 import Wan21, Wan21I2V
 from toolkit.models.cogview4 import CogView4
+from toolkit.models.dinov3 import DINOv3
 
 BUILT_IN_MODELS = [
     Wan21,
     Wan21I2V,
     CogView4,
+    DINOv3,
 ]
 
 

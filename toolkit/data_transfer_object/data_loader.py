@@ -13,7 +13,8 @@ from toolkit import image_utils
 from toolkit.basic import get_quick_signature_string
 from toolkit.dataloader_mixins import CaptionProcessingDTOMixin, ImageProcessingDTOMixin, LatentCachingFileItemDTOMixin, \
     ControlFileItemDTOMixin, ArgBreakMixin, PoiFileItemDTOMixin, MaskFileItemDTOMixin, AugmentationFileItemDTOMixin, \
-    UnconditionalFileItemDTOMixin, ClipImageFileItemDTOMixin, InpaintControlFileItemDTOMixin, TextEmbeddingFileItemDTOMixin
+    UnconditionalFileItemDTOMixin, ClipImageFileItemDTOMixin, InpaintControlFileItemDTOMixin, TextEmbeddingFileItemDTOMixin, \
+    SegmentationMaskFileItemDTOMixin
 from toolkit.prompt_utils import PromptEmbeds, concat_prompt_embeds
 
 if TYPE_CHECKING:
@@ -39,6 +40,7 @@ class FileItemDTO(
     InpaintControlFileItemDTOMixin,
     ClipImageFileItemDTOMixin,
     MaskFileItemDTOMixin,
+    SegmentationMaskFileItemDTOMixin,
     AugmentationFileItemDTOMixin,
     UnconditionalFileItemDTOMixin,
     PoiFileItemDTOMixin,
@@ -145,6 +147,7 @@ class DataLoaderBatchDTO:
             self.control_tensor: Union[torch.Tensor, None] = None
             self.clip_image_tensor: Union[torch.Tensor, None] = None
             self.mask_tensor: Union[torch.Tensor, None] = None
+            self.segmentation_masks: Union[torch.Tensor, None] = None
             self.unaugmented_tensor: Union[torch.Tensor, None] = None
             self.unconditional_tensor: Union[torch.Tensor, None] = None
             self.unconditional_latents: Union[torch.Tensor, None] = None
@@ -225,6 +228,18 @@ class DataLoaderBatchDTO:
                     else:
                         mask_tensors.append(x.mask_tensor)
                 self.mask_tensor = torch.cat([x.unsqueeze(0) for x in mask_tensors])
+
+            # Handle segmentation masks
+            self.segmentation_masks: Union[torch.Tensor, None] = None
+            if any([hasattr(x, 'segmentation_mask') and x.segmentation_mask is not None for x in self.file_items]):
+                segmentation_masks = []
+                for x in self.file_items:
+                    if hasattr(x, 'segmentation_mask') and x.segmentation_mask is not None:
+                        segmentation_masks.append(x.segmentation_mask)
+                    else:
+                        # Create dummy mask if needed (all background class 0)
+                        segmentation_masks.append(torch.zeros((512, 512), dtype=torch.long))
+                self.segmentation_masks = torch.stack(segmentation_masks)
 
             # add unaugmented tensors for ones with augments
             if any([x.unaugmented_tensor is not None for x in self.file_items]):

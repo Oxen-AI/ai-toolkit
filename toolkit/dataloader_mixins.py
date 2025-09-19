@@ -651,6 +651,8 @@ class ImageProcessingDTOMixin:
                 self.load_clip_image()
             if self.has_mask_image:
                 self.load_mask_image()
+            if self.has_segmentation_mask:
+                self.load_segmentation_mask()
             if self.has_unconditional:
                 self.load_unconditional_image()
             return
@@ -748,6 +750,8 @@ class ImageProcessingDTOMixin:
                 self.load_clip_image()
             if self.has_mask_image:
                 self.load_mask_image()
+            if self.has_segmentation_mask:
+                self.load_segmentation_mask()
             if self.has_unconditional:
                 self.load_unconditional_image()
 
@@ -1267,6 +1271,65 @@ class AugmentationFileItemDTOMixin:
 
     def cleanup_control(self: 'FileItemDTO'):
         self.unaugmented_tensor = None
+
+
+class SegmentationMaskFileItemDTOMixin:
+    """Mixin for loading segmentation masks (class indices per pixel)"""
+
+    def __init__(self: 'FileItemDTO', *args, **kwargs):
+        if hasattr(super(), '__init__'):
+            super().__init__(*args, **kwargs)
+
+        self.segmentation_mask: Union[torch.Tensor, None] = None
+        self.has_segmentation_mask = False
+        self.segmentation_mask_path: Union[str, None] = None
+
+        dataset_config: 'DatasetConfig' = kwargs.get('dataset_config', None)
+
+        # Check for segmentation mask path
+        if hasattr(dataset_config, 'mask_ext') and hasattr(dataset_config, 'mask_suffix'):
+            img_path = kwargs.get('path', None)
+            if img_path:
+                file_name_no_ext = os.path.splitext(os.path.basename(img_path))[0]
+                mask_name = file_name_no_ext + dataset_config.mask_suffix + '.' + dataset_config.mask_ext
+                mask_path = os.path.join(os.path.dirname(img_path), mask_name)
+
+                if os.path.exists(mask_path):
+                    self.segmentation_mask_path = mask_path
+                    self.has_segmentation_mask = True
+        elif (hasattr(dataset_config, 'mask_ext') and
+              hasattr(dataset_config, 'image_label') and
+              hasattr(dataset_config, 'mask_label')):
+            img_path = kwargs.get('path', None)
+            if img_path:
+                file_name_no_ext = os.path.splitext(os.path.basename(img_path))[0]
+                mask_name = file_name_no_ext.replace(dataset_config.image_label, dataset_config.mask_label)
+                mask_name += '.' + dataset_config.mask_ext
+                mask_path = os.path.join(os.path.dirname(img_path), mask_name)
+
+                if os.path.exists(mask_path):
+                    self.segmentation_mask_path = mask_path
+                    self.has_segmentation_mask = True
+
+    def load_segmentation_mask(self: 'FileItemDTO'):
+        """Load segmentation mask as class indices"""
+        if not self.has_segmentation_mask:
+            return None
+
+        try:
+            # Load mask as grayscale
+            img = Image.open(self.segmentation_mask_path).convert('L')
+            mask_array = np.array(img, dtype=np.int64)
+
+            # Convert to tensor
+            self.segmentation_mask = torch.from_numpy(mask_array).long()
+
+            return self.segmentation_mask
+
+        except Exception as e:
+            print_acc(f"Error loading segmentation mask: {self.segmentation_mask_path}")
+            print_acc(f"Error: {e}")
+            return None
 
 
 class MaskFileItemDTOMixin:
