@@ -8,7 +8,7 @@ import torch.nn.functional as F
 from tqdm import tqdm
 
 from jobs.process.BaseTrainProcess import BaseTrainProcess
-from toolkit.config_modules import ModelConfig, TrainConfig, SaveConfig, OxenConfig
+from toolkit.config_modules import ModelConfig, TrainConfig, SaveConfig, OxenConfig, LoggingConfig
 from toolkit.models.dinov3 import DINOv3
 from toolkit.optimizer import get_optimizer
 from toolkit.scheduler import get_lr_scheduler
@@ -39,6 +39,7 @@ class DINOv3TrainProcess(BaseTrainProcess):
         self.model_config = ModelConfig(**self.get_conf('model', {}))
         self.train_config = TrainConfig(**self.get_conf('train', {}))
         self.save_config = SaveConfig(**self.get_conf('save', {}))
+        self.logging_config = LoggingConfig(**self.get_conf('logging', {}))
 
         # Initialize Oxen experiment tracking if enabled
         self.oxen_config = OxenConfig(**self.get_conf('oxen', {}))
@@ -360,7 +361,8 @@ class DINOv3TrainProcess(BaseTrainProcess):
                 progress_bar.update(1)
 
                 # Log to Oxen if enabled
-                if self.oxen_logger and self.oxen_config.enabled:
+                if (self.oxen_logger and self.oxen_config.enabled and
+                    self.logging_config.log_every and self.step_num % self.logging_config.log_every == 0):
                     try:
                         # Prepare metrics for Oxen
                         learning_rate = self.optimizer.param_groups[0]['lr']
