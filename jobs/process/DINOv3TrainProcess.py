@@ -1,13 +1,14 @@
 import os
 from collections import OrderedDict
 from typing import Optional
+from datetime import datetime
 
 import torch
 import torch.nn.functional as F
 from tqdm import tqdm
 
 from jobs.process.BaseTrainProcess import BaseTrainProcess
-from toolkit.config_modules import ModelConfig, TrainConfig, SaveConfig
+from toolkit.config_modules import ModelConfig, TrainConfig, SaveConfig, OxenConfig
 from toolkit.models.dinov3 import DINOv3
 from toolkit.optimizer import get_optimizer
 from toolkit.scheduler import get_lr_scheduler
@@ -15,6 +16,16 @@ from toolkit.train_tools import get_torch_dtype
 from toolkit.accelerator import get_accelerator
 from toolkit.print import print_acc
 from toolkit.data_transfer_object.data_loader import DataLoaderBatchDTO
+
+# Import Oxen integration (with try/except for optional dependency)
+try:
+    from toolkit.oxen_experiment import AIToolkitOxenExperiment
+    from toolkit.oxen_logger import AIToolkitOxenLogger
+    OXEN_AVAILABLE = True
+except ImportError:
+    OXEN_AVAILABLE = False
+    AIToolkitOxenExperiment = None
+    AIToolkitOxenLogger = None
 
 
 class DINOv3TrainProcess(BaseTrainProcess):
@@ -28,6 +39,11 @@ class DINOv3TrainProcess(BaseTrainProcess):
         self.model_config = ModelConfig(**self.get_conf('model', {}))
         self.train_config = TrainConfig(**self.get_conf('train', {}))
         self.save_config = SaveConfig(**self.get_conf('save', {}))
+
+        # Initialize Oxen experiment tracking if enabled
+        self.oxen_config = OxenConfig(**self.get_conf('oxen', {}))
+        self.oxen_experiment = None
+        self.oxen_logger = None
 
         self.dinov3_model: Optional[DINOv3] = None
         self.optimizer = None
@@ -51,7 +67,74 @@ class DINOv3TrainProcess(BaseTrainProcess):
             self.dinov3_model, self.optimizer, train_dataloader, self.lr_scheduler
         )
 
+        # Initialize Oxen experiment tracking if enabled
+        if self.oxen_config.enabled and OXEN_AVAILABLE and self.oxen_experiment is None:
+            if self.accelerator.is_main_process:
+                print_acc("Initializing Oxen experiment tracking...")
+                try:
+                    # Get model name from config
+                    model_name = self.model_config.name_or_path or "dinov3-vitl16-pretrain-lvd1689m"
+
+                    # Initialize experiment
+                    self.oxen_experiment = AIToolkitOxenExperiment(
+                        repo_id=self.oxen_config.repo_id,
+                        base_model_name=model_name,
+                        fine_tuned_model_name=self.config.get('name', 'dinov3_segmentation'),
+                        output_dir_base=self.oxen_config.output_dir_base,
+                        is_main_process=True,
+                        host=self.oxen_config.host,
+                        scheme=self.oxen_config.scheme,
+                    )
+
+                    # Initialize logger
+                    self.oxen_logger = AIToolkitOxenLogger(
+                        experiment=self.oxen_experiment,
+                        is_main_process=True,
+                        fine_tune_id=self.oxen_config.fine_tune_id,
+                    )
+
+                    print_acc(f"Oxen experiment initialized: {self.oxen_experiment.name}")
+
+                except Exception as e:
+                    print_acc(f"Warning: Failed to initialize Oxen experiment: {e}")
+                    self.oxen_experiment = None
+                    self.oxen_logger = None
+
+            # Broadcast experiment details to other processes if using distributed training
+            if hasattr(self.accelerator, 'num_processes') and self.accelerator.num_processes > 1:
+                if self.accelerator.is_main_process:
+                    details = self.oxen_experiment.get_details_for_broadcast() if self.oxen_experiment else {}
+                else:
+                    details = {}
+
+                # Broadcast details to all processes
+                details = self.accelerator.broadcast_object_list([details])[0]
+
+                if not self.accelerator.is_main_process and details:
+                    # Initialize experiment on non-main processes
+                    self.oxen_experiment = AIToolkitOxenExperiment(
+                        repo_id=self.oxen_config.repo_id,
+                        base_model_name=details.get('base_model_name', 'dinov3'),
+                        fine_tuned_model_name=details.get('fine_tuned_model_name', 'dinov3_segmentation'),
+                        output_dir_base=self.oxen_config.output_dir_base,
+                        is_main_process=False,
+                        host=self.oxen_config.host,
+                        scheme=self.oxen_config.scheme,
+                    )
+
+                    self.oxen_experiment.update_from_broadcast(details)
+
         self.training_loop(train_dataloader)
+
+        # Finalize Oxen experiment if enabled
+        if self.accelerator.is_main_process:
+            if self.oxen_logger and self.oxen_config.enabled:
+                try:
+                    print_acc("Finalizing Oxen experiment...")
+                    self.oxen_logger.finalize_experiment(self.save_root)
+                    print_acc("Oxen experiment finalized successfully")
+                except Exception as e:
+                    print_acc(f"Warning: Failed to finalize Oxen experiment: {e}")
 
         print_acc("Training completed!")
 
@@ -276,6 +359,23 @@ class DINOv3TrainProcess(BaseTrainProcess):
                 progress_bar.set_postfix({"loss": f"{loss.item():.4f}", "lr": f"{self.optimizer.param_groups[0]['lr']:.2e}"})
                 progress_bar.update(1)
 
+                # Log to Oxen if enabled
+                if self.oxen_logger and self.oxen_config.enabled:
+                    try:
+                        # Prepare metrics for Oxen
+                        learning_rate = self.optimizer.param_groups[0]['lr']
+                        oxen_metrics = {
+                            'step': self.step_num,
+                            'learning_rate': learning_rate,
+                            'timestamp': datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                            'loss': loss.item(),
+                            'epoch': self.epoch_num,
+                        }
+
+                        self.oxen_logger.log_metrics(oxen_metrics, self.step_num)
+                    except Exception as e:
+                        print_acc(f"Warning: Failed to log metrics to Oxen: {e}")
+
                 # Save checkpoint
                 if self.step_num % self.save_config.save_every == 0 and self.step_num > 0:
                     self.save_checkpoint()
@@ -347,6 +447,13 @@ class DINOv3TrainProcess(BaseTrainProcess):
         torch.save(training_state, os.path.join(checkpoint_dir, "training_state.pth"))
 
         print_acc(f"Checkpoint saved to {checkpoint_dir}")
+
+        # Log checkpoint to Oxen if enabled
+        if self.oxen_logger and self.oxen_config.enabled:
+            try:
+                self.oxen_logger.save_checkpoint(checkpoint_dir, self.step_num)
+            except Exception as e:
+                print_acc(f"Warning: Failed to log checkpoint to Oxen: {e}")
 
     def load_checkpoint(self, checkpoint_path: str):
         print_acc(f"Loading checkpoint from {checkpoint_path}")
