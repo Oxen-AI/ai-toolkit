@@ -80,7 +80,7 @@ class DINOv3TrainProcess(BaseTrainProcess):
                     self.oxen_experiment = AIToolkitOxenExperiment(
                         repo_id=self.oxen_config.repo_id,
                         base_model_name=model_name,
-                        fine_tuned_model_name=self.config.get('name', 'dinov3_segmentation'),
+                        fine_tuned_model_name=self.name,
                         output_dir_base=self.oxen_config.output_dir_base,
                         is_main_process=True,
                         host=self.oxen_config.host,
@@ -114,13 +114,13 @@ class DINOv3TrainProcess(BaseTrainProcess):
                 if not self.accelerator.is_main_process and details:
                     # Initialize experiment on non-main processes
                     self.oxen_experiment = AIToolkitOxenExperiment(
-                        repo_id=self.oxen_config.repo_id,
-                        base_model_name=details.get('base_model_name', 'dinov3'),
-                        fine_tuned_model_name=details.get('fine_tuned_model_name', 'dinov3_segmentation'),
-                        output_dir_base=self.oxen_config.output_dir_base,
+                        repo_id=details.get('repo_id'),
+                        base_model_name="",  # Not used on non-main processes
+                        fine_tuned_model_name=self.name,
+                        output_dir_base="",  # Not used on non-main processes
                         is_main_process=False,
-                        host=self.oxen_config.host,
-                        scheme=self.oxen_config.scheme,
+                        host=details.get('host', 'hub.oxen.ai'),
+                        scheme=details.get('scheme', 'https'),
                     )
 
                     self.oxen_experiment.update_from_broadcast(details)
