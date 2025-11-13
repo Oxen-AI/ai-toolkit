@@ -80,6 +80,8 @@ class SampleItem:
                 print(f"Invalid network_multiplier {self.network_multiplier}, defaulting to 1.0")
                 self.network_multiplier = 1.0
         
+        # only for models that support it, (qwen image edit 2509 for now)
+        self.do_cfg_norm: bool = kwargs.get('do_cfg_norm', False)
 
 class SampleConfig:
     def __init__(self, **kwargs):
@@ -114,6 +116,8 @@ class SampleConfig:
         ]
         raw_samples = kwargs.get('samples', default_samples_kwargs)
         self.samples = [SampleItem(self, **item) for item in raw_samples]
+        # only for models that support it, (qwen image edit 2509 for now)
+        self.do_cfg_norm: bool = kwargs.get('do_cfg_norm', False)
         
     @property
     def prompts(self):
@@ -630,6 +634,21 @@ class ModelConfig:
         
         self.arch: ModelArch = kwargs.get("arch", None)
         
+        # auto memory management, only for some models
+        self.auto_memory = kwargs.get("auto_memory", False)
+        # auto memory is deprecated, use layer offloading instead
+        if self.auto_memory:
+            print("auto_memory is deprecated, use layer_offloading instead")
+        self.layer_offloading = kwargs.get("layer_offloading", self.auto_memory )
+        if self.layer_offloading and self.qtype == "qfloat8":
+            self.qtype = "float8"
+        if self.layer_offloading and not self.qtype_te == "qfloat8":
+            self.qtype_te = "float8"
+        
+        # 0 is off and 1.0 is 100% of the layers
+        self.layer_offloading_transformer_percent = kwargs.get("layer_offloading_transformer_percent", 1.0)
+        self.layer_offloading_text_encoder_percent = kwargs.get("layer_offloading_text_encoder_percent", 1.0)
+
         # can be used to load the extras like text encoder or vae from here
         # only setup for some models but will prevent having to download the te for
         # 20 different model variants
@@ -656,6 +675,7 @@ class ModelConfig:
         
         if self.arch == "flex1":
             self.arch = "flux"
+            
         
         # handle migrating to new model arch
         if self.arch is not None:
@@ -1003,7 +1023,8 @@ class GenerateImageConfig:
             ctrl_img_3: Optional[str] = None,  # third control image for multi control model
             num_frames: int = 1,
             fps: int = 15,
-            ctrl_idx: int = 0
+            ctrl_idx: int = 0,
+            do_cfg_norm: bool = False,
     ):
         self.width: int = width
         self.height: int = height
@@ -1073,6 +1094,8 @@ class GenerateImageConfig:
         self.width = max(64, self.width - self.width % 8)  # round to divisible by 8
 
         self.logger = logger
+        
+        self.do_cfg_norm: bool = do_cfg_norm
 
     def set_gen_time(self, gen_time: int = None):
         if gen_time is not None:

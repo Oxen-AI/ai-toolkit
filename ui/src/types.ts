@@ -39,6 +39,16 @@ export interface GpuInfo {
   fan: GpuFan;
 }
 
+export interface CpuInfo {
+  name: string;
+  cores: number;
+  temperature: number;
+  totalMemory: number;
+  freeMemory: number;
+  availableMemory: number;
+  currentLoad: number;
+}
+
 export interface GPUApiResponse {
   hasNvidiaSmi: boolean;
   gpus: GpuInfo[];
@@ -143,6 +153,9 @@ export interface ModelConfig {
   arch: string;
   low_vram: boolean;
   model_kwargs: { [key: string]: any };
+  layer_offloading?: boolean;
+  layer_offloading_transformer_percent?: number;
+  layer_offloading_text_encoder_percent?: number;
 }
 
 export interface SampleItem {
@@ -221,7 +234,7 @@ export interface JobConfig {
 }
 
 export interface ConfigDoc {
-  title: string;
+  title: string | React.ReactNode;
   description: React.ReactNode;
 }
 
